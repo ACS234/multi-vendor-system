@@ -1,28 +1,18 @@
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
 from .models import *
-
-User = get_user_model()
-
-# User
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['id', 'email', 'name', 'role']
 
 # Vendor
 class VendorSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
-
     class Meta:
         model = Vendor
         fields = '__all__'
 
 # Category
 class CategorySerializer(serializers.ModelSerializer):
+    parent_name = serializers.CharField(source='parent.name', read_only=True)
     class Meta:
         model = Category
-        fields = '__all__'
+        fields = ['id', 'name', 'parent', 'parent_name']
 
 # Product Image
 class ProductImageSerializer(serializers.ModelSerializer):
@@ -38,7 +28,8 @@ class ProductVariantSerializer(serializers.ModelSerializer):
 
 # Product
 class ProductSerializer(serializers.ModelSerializer):
-    vendor = VendorSerializer(read_only=True)
+    # vendor = VendorSerializer(read_only=True)
+    vendor=serializers.PrimaryKeyRelatedField(queryset=Vendor.objects.all())
     images = ProductImageSerializer(many=True, read_only=True)
     variants = ProductVariantSerializer(many=True, read_only=True)
 
@@ -57,7 +48,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 # Order
 class OrderSerializer(serializers.ModelSerializer):
-    customer = UserSerializer(read_only=True)
+    # customer = UserSerializer(read_only=True)
     items = OrderItemSerializer(many=True, read_only=True)
 
     class Meta:
@@ -75,7 +66,7 @@ class PaymentSerializer(serializers.ModelSerializer):
 
 # Review
 class ReviewSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
+    # user = UserSerializer(read_only=True)
 
     class Meta:
         model = Review
@@ -83,7 +74,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 # Shipping Address
 class ShippingAddressSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
+    # user = UserSerializer(read_only=True)
     order = OrderSerializer(read_only=True)
 
     class Meta:
@@ -112,10 +103,4 @@ class WishlistSerializer(serializers.ModelSerializer):
 class CouponSerializer(serializers.ModelSerializer):
     class Meta:
         model = Coupon
-        fields = '__all__'
-
-# OrderCoupon
-class OrderCouponSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OrderCoupon
         fields = '__all__'

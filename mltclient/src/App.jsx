@@ -1,40 +1,71 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import AdminDashboard from './pages/AdminDashboard';
-import VendorDashboard from './pages/VendorDashboard';
-import UserDashboard from './pages/CustomerDashboard';
-import Login from './pages/AuthPages/Login'
-import Register from './pages/AuthPages/Register';
-import Sidebar from './layout/Sidebar';
-// import ProtectedRoute from './pages/AuthPages/ProtectedRoute';
+import { Route, Routes } from 'react-router-dom';
+import Sidebar from './components/Sidebar';
+import Dashboard from './pages/Dashboard';
+import Employees from './pages/Employee';
+import Departments from './pages/Departments';
+import Settings from './pages/Settings';
+import ProductListing from './components/ProductList';
+import VendorProfile from './components/VendorProfile';
+import Analytics from './pages/Analytics';
+import ProfileUpdate from './pages/Profileupdate';
+import CreateProduct from './components/AddProduct';
+import UpdateProduct from './components/UpdateProduct';
+import ProductAnalytics from './components/ProductRanking';
+import NotFound from './pages/NotFound';
+import ProductDetail from './components/ProductDetails';
+import ProductCart from './components/ProductCart';
+import PaymentPage from './components/Payment';
+import ManageProductsPage from './components/ManageProducts';
+import Login from './components/Auth/Login';
+import Register from './components/Auth/Register';
+import ProtectedRoute from './routes/ProtectedRoute';
+import HomePage from './pages/HomePage';
 
-function App() {
+const App = () => {
   return (
-    <BrowserRouter>
-    <Sidebar/>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+    <>
+      <div className="flex min-h-screen">
+        <Sidebar/>
+        <div 
+          className="w-full p-4 transition-all duration-300 mx-auto overflow-y-auto">
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-        <Route path="/" element={
-          // <ProtectedRoute role="admin">
-            <AdminDashboard />
-          // {/* </ProtectedRoute> */}
-        }/>
+            <Route element={<ProtectedRoute allowedRoles={['admin', 'vendor', 'customer']} />}>
+              <Route path="/" element={<HomePage />} />
+            </Route>
 
-        <Route path="/vendor" element={
-          // <ProtectedRoute role="vendor">
-            <VendorDashboard />
-          // </ProtectedRoute>
-        }/>
+            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/departments" element={<Departments />} />
+              <Route path="/employees" element={<Employees />} />
+              <Route path="/employees/new" element={<Employees />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/settings/updateprofile" element={<ProfileUpdate />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/analytic" element={<ProductAnalytics />} />
+            </Route>
 
-        <Route path="/user" element={
-          // <ProtectedRoute role="user">
-            <UserDashboard />
-          // </ProtectedRoute>
-        }/>
-      </Routes>
-    </BrowserRouter>
+            <Route element={<ProtectedRoute allowedRoles={['admin', 'vendor']} />}>
+              <Route path="/profile" element={<VendorProfile />} />
+              <Route path="/products/create" element={<CreateProduct />} />
+              <Route path="/products/edit/:id" element={<UpdateProduct />} />
+              <Route path="/products/manage-product" element={<ManageProductsPage />} />
+            </Route>
+
+            <Route element={<ProtectedRoute allowedRoles={['vendor', 'customer']} />}>
+              <Route path="/products" element={<ProductListing />} />
+              <Route path="/product-detail/:id" element={<ProductDetail />} />
+              <Route path="/cart" element={<ProductCart />} />
+              <Route path="/payment" element={<PaymentPage />} />
+            </Route> 
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </div>
+      </div>
+    </>
   );
-}
+};
 
 export default App;

@@ -2,17 +2,22 @@ from django.urls import path
 from .views import *
 
 urlpatterns = [
-    # Users
-    path('users/', UserListCreateAPIView.as_view(), name='user-list-create'),
-    path('users/<int:pk>/', UserDetailAPIView.as_view(), name='user-detail'),
-
     # Vendors
-    path('vendors/', VendorListCreateAPIView.as_view(), name='vendor-list-create'),
+    path('vendors/', VendorListView.as_view(), name='vendor-list-create'),
     path('vendors/<int:pk>/', VendorDetailAPIView.as_view(), name='vendor-detail'),
 
     # Products
     path('products/', ProductListCreateAPIView.as_view(), name='product-list-create'),
     path('products/<int:pk>/', ProductDetailAPIView.as_view(), name='product-detail'),
+    
+    # Product Varient
+    path('pvarients/', ProductVarientAPIView.as_view(), name='product-list-create'),
+    path('pvarients/<int:pk>/', ProductVarientDetailAPIView.as_view(), name='product-detail'),
+    
+    
+    #Category
+    path('categories/', CategoryListCreateView.as_view(), name='category-list-create'),
+    path('categories/<int:pk>/', CategoryDetailView.as_view(), name='category-detail'),
 
     # Orders
     path('orders/', OrderListCreateAPIView.as_view(), name='order-list-create'),
