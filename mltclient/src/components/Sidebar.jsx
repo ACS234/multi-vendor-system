@@ -20,15 +20,16 @@ import { IoIosLogIn } from "react-icons/io";
 import { useNavigate } from 'react-router-dom';
 
 import { RiLogoutCircleRLine } from "react-icons/ri";
+import { useCurrentUser } from '../hooks/useUser';
 
-const Sidebar = () => {
+const Sidebar = ({isCollapsed,toggleCollapse}) => {
   const { pathname } = useLocation();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const {role} = useCurrentUser();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(!!sessionStorage.getItem(ACCESS_TOKEN));
   const navigate = useNavigate()
-  const toggleCollapse = () => setIsCollapsed(!isCollapsed);
+  // const toggleCollapse = () => setIsCollapsed(!isCollapsed);
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
   const toggleDropdown = (name) => {
     setOpenDropdown(openDropdown === name ? null : name);
@@ -42,7 +43,7 @@ const Sidebar = () => {
 
   const navLinks = [
     { name: 'Home', path: '/', icon: <MdApartment size={20} /> },
-    ...(isAuthenticated ? [
+    ...(isAuthenticated || role ? [
       { name: 'Dashboard', path: '/dashboard', icon: <MdDashboard size={20} /> },
       { name: 'Profile', path: '/profile', icon: <MdPerson size={20} /> },
       {
@@ -82,9 +83,9 @@ const Sidebar = () => {
     ]),
   ];
   return (
-    <div className={`min-h-screen flex ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
-      <div className={`transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'} bg-inherit`}>
-        <div className="flex justify-between items-center p-4">
+    <div className={`fixed left-0 min-h-screen flex ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
+      <div className={`transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'} bg-inherit`}>
+        <div className="flex justify-between items-center p-2">
           {!isCollapsed && <h2 className="text-xl font-semibold">ACS Plateform</h2>}
           <button onClick={toggleCollapse} className="text-xl">
             {isCollapsed ? '→' : '←'}
@@ -129,7 +130,7 @@ const Sidebar = () => {
           ))}
         </ul>
 
-        <div className="mt-4 p-4 flex flex-col gap-2">
+        <div className="mt-4 p-2 flex flex-col gap-2">
           {isAuthenticated && (
             <button
               onClick={handleLogout}

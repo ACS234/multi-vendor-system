@@ -9,6 +9,7 @@ admin.site.register(CartItem)
 admin.site.register(Coupon)
 admin.site.register(Order)
 admin.site.register(OrderItem)
+admin.site.register(ShippingAddress)
 
 @admin.register(Vendor)
 class VendorAdmin(admin.ModelAdmin):
@@ -18,5 +19,5 @@ class VendorAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ( 'name', 'vendor', 'price', 'stock', 'category')
+    list_display = ( 'name', 'vendor', 'price','status', 'stock', 'category')
     search_fields = ('name',)

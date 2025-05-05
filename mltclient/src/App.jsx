@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
@@ -22,21 +23,25 @@ import ProtectedRoute from './routes/ProtectedRoute';
 import HomePage from './pages/HomePage';
 
 const App = () => {
+
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const toggleCollapse = () => setIsCollapsed(!isCollapsed);
+
   return (
     <>
       <div className="flex min-h-screen">
-        <Sidebar/>
-        <div 
-          className="w-full p-4 transition-all duration-300 mx-auto overflow-y-auto">
+        <Sidebar isCollapsed={isCollapsed} toggleCollapse={toggleCollapse} />
+        <div
+          className={`w-full p-1 transition-all duration-300 mx-auto overflow-y-auto ${isCollapsed ? 'ml-16' : 'ml-64'} bg-inherit`}>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 
-            <Route element={<ProtectedRoute allowedRoles={['admin', 'vendor', 'customer']} />}>
+            <Route element={<ProtectedRoute allowedRoles={['super_admin', 'vendor', 'customer']} />}>
               <Route path="/" element={<HomePage />} />
             </Route>
 
-            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+            <Route element={<ProtectedRoute allowedRoles={['super_admin']} />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/departments" element={<Departments />} />
               <Route path="/employees" element={<Employees />} />
@@ -47,19 +52,20 @@ const App = () => {
               <Route path="/analytic" element={<ProductAnalytics />} />
             </Route>
 
-            <Route element={<ProtectedRoute allowedRoles={['admin', 'vendor']} />}>
+            <Route element={<ProtectedRoute allowedRoles={['super_admin', 'vendor']} />}>
               <Route path="/profile" element={<VendorProfile />} />
+              <Route path='/vendor-profile' element={<VendorProfile />} />
               <Route path="/products/create" element={<CreateProduct />} />
               <Route path="/products/edit/:id" element={<UpdateProduct />} />
               <Route path="/products/manage-product" element={<ManageProductsPage />} />
             </Route>
 
-            <Route element={<ProtectedRoute allowedRoles={['vendor', 'customer']} />}>
+            <Route element={<ProtectedRoute allowedRoles={['super_admin', 'vendor', 'customer']} />}>
               <Route path="/products" element={<ProductListing />} />
               <Route path="/product-detail/:id" element={<ProductDetail />} />
               <Route path="/cart" element={<ProductCart />} />
               <Route path="/payment" element={<PaymentPage />} />
-            </Route> 
+            </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>

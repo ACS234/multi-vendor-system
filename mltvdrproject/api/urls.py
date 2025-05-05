@@ -11,7 +11,7 @@ urlpatterns = [
     path('products/<int:pk>/', ProductDetailAPIView.as_view(), name='product-detail'),
     
     # Product Varient
-    path('pvarients/', ProductVarientAPIView.as_view(), name='product-list-create'),
+    path('pvarients/', ProductVariantAPIView.as_view(), name='product-list-create'),
     path('pvarients/<int:pk>/', ProductVarientDetailAPIView.as_view(), name='product-detail'),
     
     

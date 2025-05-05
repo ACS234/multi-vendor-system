@@ -34,7 +34,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-orange-500 p-4 rounded-lg shadow-md">
             <h3 className="text-xl font-semibold">Total Products</h3>
-            <p className="text-3xl font-bold">{productData.totalProducts}</p>
+            <p className="text-3xl font-bold">{productList.length}</p>
           </div>
           <div className="bg-green-500 p-4 rounded-lg shadow-md">
             <h3 className="text-xl font-semibold">Active Categories</h3>
@@ -79,7 +79,7 @@ const Dashboard = () => {
                 <th className="p-2 border">Category</th>
                 <th className="p-2 border">Status</th>
                 <th className="p-2 border">Price</th>
-                <th className="p-2 border">Launch Date</th>
+                <th className="p-2 border">Stock</th>
                 <th className="p-2 border">Actions</th>
               </tr>
             </thead>
@@ -87,14 +87,18 @@ const Dashboard = () => {
               {productList.map((product) => (
                 <tr key={product.id}>
                   <td className="p-2 border">{product.name}</td>
-                  <td className="p-2 border">{product.category}</td>
-                  <td className="p-2 border">{product.status}</td>
+                  <td className="p-2 border">{product.category.name}</td>
+                  <td
+                    className={`px-4 py-2 text-sm border ${product.status ? ' text-green-700' : ' text-red-700'}`}
+                  >
+                    {product.status ? 'Active' : 'Inactive'}
+                  </td>
                   <td className="p-2 border">{product.price}</td>
-                  <td className="p-2 border">{product.launchDate}</td>
-                  <td className="p-2 border">
-                    <button className="bg-blue-500 text-white px-4 py-2 rounded-md">View</button>
-                    <button className="bg-yellow-500 text-white px-4 py-2 rounded-md ml-2">Edit</button>
-                    <button className="bg-red-500 text-white px-4 py-2 rounded-md ml-2">Delete</button>
+                  <td className="p-2 border">{product.stock}</td>
+                  <td className="p-2 border flex justify-center items-center">
+                    <button className="bg-blue-500 text-white px-3 py-1 rounded-md">View</button>
+                    <button className="bg-yellow-500 text-white px-3 py-1 rounded-md ml-2">Edit</button>
+                    <button className="bg-red-500 text-white px-3 py-1 rounded-md ml-2">Delete</button>
                   </td>
                 </tr>
               ))}

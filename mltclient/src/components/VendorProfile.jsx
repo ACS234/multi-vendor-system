@@ -1,79 +1,131 @@
-import React from 'react';
-import ProductList from '../components/ProductList';
+import React, { useState,useEffect } from 'react';
+import { Bar } from 'react-chartjs-2';
+import 'chart.js/auto';
+import { useCurrentUser } from '../hooks/useUser';
+import { getProduct } from '../services/apiServices';
+import { ToastContainer,toast } from 'react-toastify';
 
 const VendorProfile = () => {
-  // Vendor info (this could be dynamic in a real-world app)
-  const vendor = {
-    name: 'John Doe',
-    storeName: 'John\'s Store',
-    storeDescription: 'A great place for all your needs!',
-    rating: 4.5,
-    totalSales: 1200,  // Total sales value
-    totalProductsSold: 500,  // Total products sold
-    bestSellingProduct: 'Product 2',  // Best selling product
-    stockStatus: 'Low',  // Stock status (could be dynamic based on the actual stock)
-    products: [
-      {
-        id: 1,
-        name: 'Product 1',
-        description: 'Description of Product 1',
-        price: 29.99,
-        image: 'https://via.placeholder.com/200',
-      },
-      {
-        id: 2,
-        name: 'Product 2',
-        description: 'Description of Product 2',
-        price: 39.99,
-        image: 'https://via.placeholder.com/200',
-      },
-      {
-        id: 3,
-        name: 'Product 3',
-        description: 'Description of Product 3',
-        price: 49.99,
-        image: 'https://via.placeholder.com/200',
-      },
-      {
-        id: 4,
-        name: 'Product 4',
-        description: 'Description of Product 4',
-        price: 59.99,
-        image: 'https://via.placeholder.com/200',
-      },
-    ],
+  const {user}=useCurrentUser()
+  const [products,setProducts]=useState([])
+  const fetchProducts = async () => {
+      try {
+        const data = await getProduct();
+        setProducts(data)
+      } catch (error) {
+        toast.error("Something Went Error", error)
+      }
+    }
+    useEffect(() => {
+      fetchProducts()
+    }, [])
+
+  const orders = [
+    { id: 101, buyer: 'Alice', total: 200, status: 'Pending' },
+    { id: 102, buyer: 'Bob', total: 300, status: 'Shipped' },
+  ];
+
+  const chartData = {
+    labels: products.map(p => p.name),
+    datasets: [{
+      label: 'Sales',
+      data: [50, 80],
+      backgroundColor: ['#4caf50', '#2196f3'],
+    }],
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">{vendor.storeName}</h1>
-        <p className="text-lg text-gray-600">{vendor.storeDescription}</p>
-        <div className="mt-4 flex justify-center items-center">
-          <span className="text-xl font-semibold text-gray-800">Rating: </span>
-          <span className="ml-2 text-yellow-500">{vendor.rating} ★</span>
+    <div className="p-8 space-y-12 bg-gray-50 min-h-screen text-gray-800">
+      <ToastContainer/>
+      <section className="max-w-4xl mx-auto">
+        <h2 className="text-2xl font-bold mb-4 text-gray-800">Vendor Profile</h2>
+        <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition duration-300">
+          <ul className="list-disc pl-6 space-y-2">
+            <li><strong>Name:</strong> {user.username}</li>
+            <li><strong>Email:</strong> {user.email}</li>
+            <li><strong>Business:</strong> {user.role}</li>
+          </ul>
+          <button className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">
+            Edit Profile
+          </button>
         </div>
-      </div>
+      </section>
+      <section className="max-w-5xl mx-auto">
+        <h2 className="text-2xl font-bold mb-4 text-gray-800">Product List</h2>
+        <button className="mb-4 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition duration-300">
+          Add Product
+        </button>
+        <div className="space-y-4">
+          {products.map(prod => (
+            <div
+              key={prod.id}
+              className="bg-white p-4 rounded-lg shadow-md hover:shadow-xl transition duration-300"
+            >
+              <ul className="list-disc pl-6 space-y-2">
+                <li><strong>Name:</strong> {prod.name}</li>
+                <li><strong>Stock:</strong> {prod.stock}</li>
+                <li><strong>Price:</strong> ${prod.price}</li>
+              </ul>
+              <div className="mt-4 space-x-2">
+                <button className="px-4 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition duration-300">Edit</button>
+                <button className="px-4 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition duration-300">Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-blue-100 p-4 rounded-lg shadow-md">
-          <h3 className="text-xl font-semibold text-blue-700">Total Sales</h3>
-          <p className="text-2xl font-bold text-blue-900">${vendor.totalSales}</p>
+      {/* Orders Section */}
+      <section className="max-w-5xl mx-auto">
+        <h2 className="text-2xl font-bold mb-4 text-gray-800">Orders</h2>
+        <div className="space-y-4">
+          {orders.map(order => (
+            <div
+              key={order.id}
+              className="bg-white p-4 rounded-lg shadow-md hover:shadow-xl transition duration-300"
+            >
+              <ul className="list-disc pl-6 space-y-2">
+                <li><strong>Order ID:</strong> {order.id}</li>
+                <li><strong>Buyer:</strong> {order.buyer}</li>
+                <li><strong>Total:</strong> ${order.total}</li>
+                <li><strong>Status:</strong> {order.status}</li>
+              </ul>
+              <button className="mt-4 px-4 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-300">
+                View Details
+              </button>
+            </div>
+          ))}
         </div>
-        <div className="bg-green-100 p-4 rounded-lg shadow-md">
-          <h3 className="text-xl font-semibold text-green-700">Total Products Sold</h3>
-          <p className="text-2xl font-bold text-green-900">{vendor.totalProductsSold}</p>
+      </section>
+
+      {/* Order Details Section */}
+      <section className="max-w-4xl mx-auto">
+        <h2 className="text-2xl font-bold mb-4 text-gray-800">Order Details</h2>
+        <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition duration-300">
+          <ul className="list-disc pl-6 space-y-2">
+            <li><strong>Order ID:</strong> 101</li>
+            <li><strong>Buyer:</strong> Alice</li>
+            <li><strong>Items:</strong> Product A × 2</li>
+            <li><strong>Shipping Address:</strong> 123 Main St, Springfield</li>
+          </ul>
+          <div className="mt-4">
+            <label className="block mb-2 font-semibold">Change Status:</label>
+            <select className="w-full px-3 py-2 border rounded-md">
+              <option>Pending</option>
+              <option>Shipped</option>
+              <option>Delivered</option>
+            </select>
+          </div>
         </div>
-        <div className="bg-yellow-100 p-4 rounded-lg shadow-md">
-          <h3 className="text-xl font-semibold text-yellow-700">Best Selling Product</h3>
-          <p className="text-2xl font-bold text-yellow-900">{vendor.bestSellingProduct}</p>
+      </section>
+
+      {/* Analytics Section */}
+      <section className="max-w-3xl mx-auto">
+        <h2 className="text-2xl font-bold mb-4 text-gray-800">Product Analytics</h2>
+        <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition duration-300">
+          <Bar data={chartData} />
         </div>
-        <div className="bg-red-100 p-4 rounded-lg shadow-md">
-          <h3 className="text-xl font-semibold text-red-700">Stock Status</h3>
-          <p className="text-2xl font-bold text-red-900">{vendor.stockStatus}</p>
-        </div>
-      </div>
-      <ProductList />
+      </section>
     </div>
   );
 };

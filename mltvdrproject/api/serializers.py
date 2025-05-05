@@ -28,7 +28,7 @@ class ProductVariantSerializer(serializers.ModelSerializer):
 
 # Product
 class ProductSerializer(serializers.ModelSerializer):
-    # vendor = VendorSerializer(read_only=True)
+    category = CategorySerializer(read_only=True)
     vendor=serializers.PrimaryKeyRelatedField(queryset=Vendor.objects.all())
     images = ProductImageSerializer(many=True, read_only=True)
     variants = ProductVariantSerializer(many=True, read_only=True)
@@ -36,6 +36,7 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = '__all__'
+        read_only_fields = ['user']
 
 # Order Item
 class OrderItemSerializer(serializers.ModelSerializer):

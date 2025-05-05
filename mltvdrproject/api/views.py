@@ -58,12 +58,49 @@ class CategoryDetailView(APIView):
 
 ### PRODUCTS ###
 class ProductListCreateAPIView(APIView):
-    permission_classes=[IsVendor,IsAuthenticated]
+    permission_classes = [IsVendor, IsAuthenticated]
+
+    # def get(self, request):
+    #     try:
+    #         vendor = request.user.vendor
+    #     except Vendor.DoesNotExist:
+    #         return Response({"detail": "User is not a vendor."}, status=status.HTTP_403_FORBIDDEN)
+    #     products = Product.objects.filter(vendor=vendor)
+    #     serializer = ProductSerializer(products, many=True)
+    #     return Response(serializer.data, status=status.HTTP_200_OK)
+
     def get(self, request):
-        return Response(ProductSerializer(Product.objects.all(), many=True).data)
+        user = request.user
+
+        # Role-based product access
+        if user.role == 'vendor':
+            products = Product.objects.filter(vendor=user)
+        elif user.role in ['admin', 'super_admin']:
+            products = Product.objects.all()
+        elif user.role == 'customer':
+            products = Product.objects.filter(is_published=True)
+        else:
+            return Response({"detail": "You do not have access."}, status=403)
+
+        serializer = ProductSerializer(products, many=True)
+        return Response(serializer.data, status=200)
+
     def post(self, request):
-        s = ProductSerializer(data=request.data)
-        return Response(s.data, status=201) if s.is_valid() and s.save() else Response(s.errors, status=400)
+        try:
+            vendor = request.user.vendor
+        except Vendor.DoesNotExist:
+            return Response({"detail": "User is not a vendor."}, status=status.HTTP_403_FORBIDDEN)
+        data = request.data
+        is_bulk = isinstance(data, list)
+        serializer = ProductSerializer(data=data, many=is_bulk)
+
+        if serializer.is_valid():
+            serializer.save(vendor=vendor)
+            if is_bulk:
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class ProductDetailAPIView(APIView):
     permission_classes=[IsVendor,IsAuthenticated]
@@ -83,16 +120,44 @@ class ProductDetailAPIView(APIView):
     def delete(self, request, pk):
         get_object_or_404(Product, pk=pk).delete()
         return Response(status=204)
-    
-class ProductVarientAPIView(APIView):
-    
-    permission_classes=[IsVendor,IsAuthenticated]
-    
+
+class ProductVariantAPIView(APIView):
+    permission_classes = [IsVendor, IsAuthenticated]
+
     def get(self, request):
-        return Response(ProductVariantSerializer(ProductVariant.objects.all(), many=True).data)
+        try:
+            vendor = request.user.vendor
+        except Vendor.DoesNotExist:
+            return Response({"detail": "User is not a vendor."}, status=status.HTTP_403_FORBIDDEN)
+        
+        products = Product.objects.filter(vendor=vendor)
+        product_variants = ProductVariant.objects.filter(product__in=products)
+        serializer = ProductVariantSerializer(product_variants, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     def post(self, request):
-        s = ProductVariantSerializer(data=request.data)
-        return Response(s.data, status=201) if s.is_valid() and s.save() else Response(s.errors, status=400)
+        try:
+            vendor = request.user.vendor
+        except Vendor.DoesNotExist:
+            return Response({"detail": "User is not a vendor."}, status=status.HTTP_403_FORBIDDEN)
+
+        data = request.data
+        is_bulk = isinstance(data, list)
+        if not is_bulk:
+            product_id = data.get('product')  
+            try:
+                product = Product.objects.get(id=product_id, vendor=vendor)
+            except Product.DoesNotExist:
+                return Response({"detail": "Product does not belong to this vendor."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            data['product'] = product.id 
+        
+        serializer = ProductVariantSerializer(data=data, many=is_bulk)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ProductVarientDetailAPIView(APIView):
     
