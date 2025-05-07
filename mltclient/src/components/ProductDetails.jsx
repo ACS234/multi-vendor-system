@@ -13,14 +13,20 @@ const ProductDetail = () => {
     const getDetail = async (id) => {
       try {
         const data = await getProductDetail(id);
-        console.log(data)
-        setProduct(data);
+        const productWithImage = {
+          ...data,
+          primaryImage: data.images?.[0]?.image ?? null,
+        };
+  
+        setProduct(productWithImage);
       } catch (error) {
         console.error("Something went wrong", error);
       }
     };
+  
     if (id) getDetail(id);
   }, [id]);
+  
 
   const handleCart = () => {
     navigate('/cart')
@@ -37,7 +43,7 @@ const ProductDetail = () => {
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row gap-10 bg-white p-6 rounded-lg shadow-md">
         <img
-          src={product.image}
+          src={`http://localhost:8005${product.primaryImage}`}
           alt={product.name}
           className="w-full md:w-1/2 rounded-md object-cover"
         />

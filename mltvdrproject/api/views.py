@@ -358,20 +358,9 @@ class OrderStatusUpdateView(APIView):
         return Response(OrderSerializer(order).data)
 
 
-# class OrderDetailAPIView(APIView):
-#     def get(self, request, pk):
-#         return Response(OrderSerializer(get_object_or_404(Order, pk=pk)).data)
-#     def put(self, request, pk):
-#         o = get_object_or_404(Order, pk=pk)
-#         s = OrderSerializer(o, data=request.data, partial=True)
-#         return Response(s.data) if s.is_valid() and s.save() else Response(s.errors, status=400)
-#     def delete(self, request, pk):
-#         get_object_or_404(Order, pk=pk).delete()
-#         return Response(status=204)
-
 ### ORDER ITEMS ###
 class OrderItemListCreateView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsCustomer,IsAuthenticated]
 
     def get(self, request):
         order_items = OrderItem.objects.filter(order__customer=request.user)
@@ -387,7 +376,7 @@ class OrderItemListCreateView(APIView):
 
 
 class OrderItemDetailView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsCustomer,IsAuthenticated]
 
     def get_object(self, pk, user):
         try:
@@ -421,11 +410,72 @@ class OrderItemDetailView(APIView):
 
 ### PAYMENTS ###
 class PaymentAPIView(APIView):
+    permission_classes=[IsCustomer,IsAuthenticated]
     def get(self, request):
-        return Response(PaymentSerializer(Payment.objects.all(), many=True).data)
+        payments = Payment.objects.all()
+        serializer = PaymentSerializer(payments, many=True)
+        return Response(serializer.data)
+
     def post(self, request):
-        s = PaymentSerializer(data=request.data)
-        return Response(s.data, status=201) if s.is_valid() and s.save() else Response(s.errors, status=400)
+        data = request.data
+        print(data)  # Log the incoming data
+
+        # Ensure the required fields are present
+        items = data.get('items', [])
+        total = data.get('total')  # Make sure 'total' is being passed
+        method = data.get('method')
+        amount = data.get('amount')
+
+        if not items:
+            return Response({"error": "Missing 'items' field."}, status=status.HTTP_400_BAD_REQUEST)
+        if not total:
+            return Response({"error": "Missing 'total' field."}, status=status.HTTP_400_BAD_REQUEST)
+        if not method:
+            return Response({"error": "Missing 'method' field."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if method not in ['cash', 'credit_card', 'upi']:
+            return Response(
+                {"success": False, "error": "Invalid payment method."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        order = Order.objects.create(
+            customer=request.user,
+            status='Pending',
+        )
+
+        first_product_id = items[0].get('id') if items else None
+        try:
+            product = Product.objects.get(id=first_product_id)
+            vendor = product.vendor
+        except Product.DoesNotExist:
+            return Response({"error": "Product not found."}, status=status.HTTP_404_NOT_FOUND)
+        except AttributeError:
+            return Response({"error": "Vendor not found from product."}, status=status.HTTP_400_BAD_REQUEST)
+
+        for item in items:
+            product_id = item.get('id')
+            quantity = item.get('quantity')
+
+            try:
+                product = Product.objects.get(id=product_id)
+            except Product.DoesNotExist:
+                return Response(
+                    {"success": False, "error": f"Product with id {product_id} not found."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            OrderItem.objects.create(order=order, product=product, quantity=quantity)
+
+        payment = Payment.objects.create(
+            order=order,
+            vendor=vendor,
+            amount=amount,
+            method=method,
+        )
+
+        serializer = PaymentSerializer(payment)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 ### REVIEWS ###
 class ReviewAPIView(APIView):

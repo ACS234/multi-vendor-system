@@ -5,7 +5,7 @@ from .models import *
 class VendorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vendor
-        fields = '__all__'
+        fields = ['id','store_name','rating']
 # Product Image
 class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -19,7 +19,8 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = '__all__'
+        # fields = '__all__'
+        exclude = ('created_at', 'updated_at')
         read_only_fields = ['user']
 
 
@@ -28,12 +29,12 @@ class CategoriesSerializer(serializers.ModelSerializer):
     subcategories = serializers.SerializerMethodField() 
     class Meta:
         model = Category
-        fields = ['id', 'name', 'parent', 'subcategories']
+        fields = ['id', 'name', 'parent','category_image','subcategories']
     def get_subcategories(self, obj):
         return CategoriesSerializer(obj.subcategories.all(), many=True).data
 
 class CategorySerializer(serializers.ModelSerializer):
-    product=ProductSerializer(many=True)
+    product=ProductSerializer(many=True,read_only=True)
     class Meta:
         model = Category
         fields = ['id', 'name', 'parent','product']
@@ -73,7 +74,8 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = '__all__'
+        # fields = '__all__'
+        exclude = ('created_at',)
 
 # Payment
 class PaymentSerializer(serializers.ModelSerializer):

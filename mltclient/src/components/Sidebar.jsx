@@ -48,9 +48,10 @@ const Sidebar = ({isCollapsed,toggleCollapse}) => {
       { name: 'Profile', path: '/profile', icon: <MdPerson size={20} /> },
       {
         name: 'Product',
-        path: '/products',
+        path: '#',
         icon: <AiFillProduct size={20} />,
         children: [
+          { name: 'Product', path: '/products' },
           { name: 'Add Product', path: '/products/create' },
           { name: 'Update Product', path: '/products/edit/:id' },
           { name: 'Manage Product', path: '/products/manage-product' },

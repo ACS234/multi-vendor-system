@@ -53,6 +53,28 @@ export const addProduct=async(data)=>{
     }
 }
 
+export const getCategories = async () => {
+    try {
+      const response = await getData(`/api/categories/`);
+      return response;
+    } catch (error) {
+      console.error("API Error:", error);
+      toast.error("Something went wrong while fetching user");
+      throw error;
+    }
+  };
+
+export const getCategoryProduct = async () => {
+    try {
+      const response = await getData(`/api/category/`);
+      return response;
+    } catch (error) {
+      console.error("API Error:", error);
+      toast.error("Something went wrong while fetching user");
+      throw error;
+    }
+  };
+
 export const getProduct = async () => {
     try {
       const response = await getData(`/api/products/`);

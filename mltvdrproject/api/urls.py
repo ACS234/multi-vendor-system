@@ -18,9 +18,8 @@ urlpatterns = [
     #Category
     path('categories/', CategoryList.as_view(), name='category-list-create'),
     path('category/<int:pk>/', CategoryDetailView.as_view(), name='category-detail'),
-    # path('category/<str:category_name>/', CategoryListCreateView.as_view(), name='category-products'),
+    path('category/<str:category_name>/', CategoryListCreateView.as_view(), name='category-products'),
     
-    path('category/', CategoryListCreateView.as_view(), name='category-products'),
 
     # Orders
     path('carts/', CartListCreateView.as_view(), name='cart-list'),

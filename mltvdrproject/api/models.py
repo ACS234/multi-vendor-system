@@ -31,7 +31,7 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     stock = models.PositiveIntegerField()
     status=models.BooleanField(default=True)
-    image=models.ForeignKey('ProductImage',on_delete=models.CASCADE,related_name='product_images')
+    image=models.ForeignKey('ProductImage',on_delete=models.CASCADE,null=True,blank=True,related_name='product_images')
     category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.SET_NULL)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -128,11 +128,17 @@ class Payment(models.Model):
         ('completed', 'Completed'),
         ('failed', 'Failed'),
     ]
+
+    PAYMENT_CHOICES = [
+        ('cash', 'Cash'),
+        ('credit_card', 'Credit Card'),
+        ('upi', 'UPI'),
+    ]
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='payments')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
-    method = models.CharField(max_length=50)
+    method = models.CharField(max_length=50,choices=PAYMENT_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)
 
 
