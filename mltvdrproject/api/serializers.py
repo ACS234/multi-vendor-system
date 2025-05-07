@@ -6,19 +6,38 @@ class VendorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vendor
         fields = '__all__'
-
-# Category
-class CategorySerializer(serializers.ModelSerializer):
-    parent_name = serializers.CharField(source='parent.name', read_only=True)
-    class Meta:
-        model = Category
-        fields = ['id', 'name', 'parent', 'parent_name']
-
 # Product Image
 class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
         fields = '__all__'
+
+# Product
+class ProductSerializer(serializers.ModelSerializer):
+    vendor=serializers.PrimaryKeyRelatedField(queryset=Vendor.objects.all())
+    images = ProductImageSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Product
+        fields = '__all__'
+        read_only_fields = ['user']
+
+
+# Category
+class CategoriesSerializer(serializers.ModelSerializer):
+    subcategories = serializers.SerializerMethodField() 
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'parent', 'subcategories']
+    def get_subcategories(self, obj):
+        return CategoriesSerializer(obj.subcategories.all(), many=True).data
+
+class CategorySerializer(serializers.ModelSerializer):
+    product=ProductSerializer(many=True)
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'parent','product']
+
 
 # Product Variant
 class ProductVariantSerializer(serializers.ModelSerializer):
@@ -26,17 +45,19 @@ class ProductVariantSerializer(serializers.ModelSerializer):
         model = ProductVariant
         fields = '__all__'
 
-# Product
-class ProductSerializer(serializers.ModelSerializer):
-    category = CategorySerializer(read_only=True)
-    vendor=serializers.PrimaryKeyRelatedField(queryset=Vendor.objects.all())
-    images = ProductImageSerializer(many=True, read_only=True)
-    variants = ProductVariantSerializer(many=True, read_only=True)
+class CartItemSerializer(serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True)
 
     class Meta:
-        model = Product
+        model = CartItem
         fields = '__all__'
-        read_only_fields = ['user']
+
+class CartSerializer(serializers.ModelSerializer):
+    items = CartItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Cart
+        fields = '__all__'
 
 # Order Item
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -47,9 +68,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
         model = OrderItem
         fields = '__all__'
 
-# Order
 class OrderSerializer(serializers.ModelSerializer):
-    # customer = UserSerializer(read_only=True)
     items = OrderItemSerializer(many=True, read_only=True)
 
     class Meta:
@@ -98,10 +117,4 @@ class WalletTransactionSerializer(serializers.ModelSerializer):
 class WishlistSerializer(serializers.ModelSerializer):
     class Meta:
         model = Wishlist
-        fields = '__all__'
-
-# Coupon
-class CouponSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Coupon
         fields = '__all__'

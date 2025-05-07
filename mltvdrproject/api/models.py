@@ -17,6 +17,7 @@ class Vendor(models.Model):
 
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    category_image = models.ImageField(upload_to='category_images/',null=True,blank=True)
     parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='subcategories')
 
     def __str__(self):
@@ -30,6 +31,7 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     stock = models.PositiveIntegerField()
     status=models.BooleanField(default=True)
+    image=models.ForeignKey('ProductImage',on_delete=models.CASCADE,related_name='product_images')
     category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.SET_NULL)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -40,7 +42,10 @@ class Product(models.Model):
 
 class ProductImage(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='product_images/')
+    image = models.ImageField(upload_to='product_images/',null=True,blank=True)
+
+    def __str__(self):
+        return f"{self.product.name}"
 
 
 class ProductVariant(models.Model):
@@ -89,17 +94,6 @@ class CartItem(models.Model):
     def subtotal(self):
         return self.product.price * self.quantity
 
-
-class Coupon(models.Model):
-    code = models.CharField(max_length=20, unique=True)
-    discount_percent = models.PositiveIntegerField()
-    active = models.BooleanField(default=True)
-    expiry_date = models.DateTimeField()
-
-    def __str__(self):
-        return self.code
-
-
 class Order(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -109,7 +103,6 @@ class Order(models.Model):
         ('cancelled', 'Cancelled'),
     ]
     customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
-    coupon = models.ForeignKey(Coupon, null=True, blank=True, on_delete=models.SET_NULL)
     total = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)

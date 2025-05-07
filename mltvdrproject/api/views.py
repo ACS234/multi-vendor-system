@@ -2,7 +2,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import viewsets
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from django.db.models import Q
+from rest_framework.permissions import IsAuthenticated,AllowAny,IsAuthenticatedOrReadOnly
 from django.shortcuts import get_object_or_404
 from .permissions import *
 from .permissions import *
@@ -37,53 +38,57 @@ class VendorDetailAPIView(APIView):
     
  ### Category
  
-class CategoryListCreateView(APIView):
+
+class CategoryList(APIView):
     def get(self, request):
-        categories = Category.objects.all()
-        serializer = CategorySerializer(categories, many=True)
-        return Response(serializer.data)
+        categories = Category.objects.filter(parent__isnull=True).prefetch_related('subcategories') 
+        serializer = CategoriesSerializer(categories, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class CategoryListCreateView(APIView):
+
+    def get(self, request, category_name):
+        category = get_object_or_404(Category, name__icontains=category_name)
+        subcategories = Category.objects.filter(parent=category)
+        products = Product.objects.filter(Q(category=category) | Q(category__in=subcategories))
+
+        serializer = ProductSerializer(products, many=True)
+        return Response({
+            "category": category.name,
+            "products": serializer.data
+        })
 
     def post(self, request):
-        serializer = CategorySerializer(data=request.data)
+        data = request.data
+        is_bulk = isinstance(data, list)
+        serializer = CategorySerializer(data=data, many=is_bulk)
+
         if serializer.is_valid():
             serializer.save()
+            if is_bulk:
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class CategoryDetailView(APIView):
     def get(self, request, pk):
         category = get_object_or_404(Category, pk=pk)
-        serializer = CategorySerializer(category)
-        return Response(serializer.data)  
+        subcategories = Category.objects.filter(parent=category)
+        products = Product.objects.filter(Q(category=category) | Q(category__in=subcategories))
+
+        serializer = ProductSerializer(products, many=True)
+        return Response({
+            "category": category.name,
+            "products": serializer.data
+        })  
 
 ### PRODUCTS ###
 class ProductListCreateAPIView(APIView):
-    permission_classes = [IsVendor, IsAuthenticated]
-
-    # def get(self, request):
-    #     try:
-    #         vendor = request.user.vendor
-    #     except Vendor.DoesNotExist:
-    #         return Response({"detail": "User is not a vendor."}, status=status.HTTP_403_FORBIDDEN)
-    #     products = Product.objects.filter(vendor=vendor)
-    #     serializer = ProductSerializer(products, many=True)
-    #     return Response(serializer.data, status=status.HTTP_200_OK)
-
+    permission_classes = [AllowAny,IsAuthenticatedOrReadOnly]
     def get(self, request):
-        user = request.user
-
-        # Role-based product access
-        if user.role == 'vendor':
-            products = Product.objects.filter(vendor=user)
-        elif user.role in ['admin', 'super_admin']:
-            products = Product.objects.all()
-        elif user.role == 'customer':
-            products = Product.objects.filter(is_published=True)
-        else:
-            return Response({"detail": "You do not have access."}, status=403)
-
+        products = Product.objects.all()
         serializer = ProductSerializer(products, many=True)
-        return Response(serializer.data, status=200)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
         try:
@@ -103,7 +108,7 @@ class ProductListCreateAPIView(APIView):
 
 
 class ProductDetailAPIView(APIView):
-    permission_classes=[IsVendor,IsAuthenticated]
+    permission_classes=[AllowAny]
     def get(self, request, pk):
         product=get_object_or_404(Product, pk=pk)
         serializer=ProductSerializer(product)
@@ -160,45 +165,259 @@ class ProductVariantAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ProductVarientDetailAPIView(APIView):
-    
     permission_classes=[IsVendor,IsAuthenticated]
     
     def get(self, request, pk):
-        return Response(ProductVariantSerializer(get_object_or_404(ProductVariant, pk=pk)).data)
+        variant=get_object_or_404(ProductVariant, pk=pk)
+        serializer=ProductVariantSerializer(variant,many=True)
+        return Response(serializer.data,status=status.HTTP_200_OK)
+    
     def put(self, request, pk):
-        p = get_object_or_404(ProductVariant, pk=pk)
-        s = ProductVariantSerializer(p, data=request.data, partial=True)
-        return Response(s.data) if s.is_valid() and s.save() else Response(s.errors, status=400)
+        product = get_object_or_404(ProductVariant, pk=pk)
+        serializer = ProductVariantSerializer(product, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=status.HTTP_200_OK)
+        Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     def delete(self, request, pk):
         get_object_or_404(ProductVariant, pk=pk).delete()
         return Response(status=204)
-    
-### ORDERS ###
-class OrderListCreateAPIView(APIView):
-    def get(self, request):
-        return Response(OrderSerializer(Order.objects.all(), many=True).data)
-    def post(self, request):
-        s = OrderSerializer(data=request.data)
-        return Response(s.data, status=201) if s.is_valid() and s.save() else Response(s.errors, status=400)
 
-class OrderDetailAPIView(APIView):
+class CartListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        carts = Cart.objects.filter(user=request.user)
+        serializer = CartSerializer(carts, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = CartSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CartDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, pk, user):
+        try:
+            return Cart.objects.get(pk=pk, user=user)
+        except Cart.DoesNotExist:
+            return None
+
     def get(self, request, pk):
-        return Response(OrderSerializer(get_object_or_404(Order, pk=pk)).data)
+        cart = self.get_object(pk, request.user)
+        if not cart:
+            return Response({"detail": "Cart not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = CartSerializer(cart)
+        return Response(serializer.data)
+
     def put(self, request, pk):
-        o = get_object_or_404(Order, pk=pk)
-        s = OrderSerializer(o, data=request.data, partial=True)
-        return Response(s.data) if s.is_valid() and s.save() else Response(s.errors, status=400)
+        cart = self.get_object(pk, request.user)
+        if not cart:
+            return Response({"detail": "Cart not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = CartSerializer(cart, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     def delete(self, request, pk):
-        get_object_or_404(Order, pk=pk).delete()
-        return Response(status=204)
+        cart = self.get_object(pk, request.user)
+        if not cart:
+            return Response({"detail": "Cart not found."}, status=status.HTTP_404_NOT_FOUND)
+        cart.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CartItemListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        cart_items = CartItem.objects.filter(cart__user=request.user)
+        serializer = CartItemSerializer(cart_items, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        try:
+            cart = Cart.objects.get(user=request.user, is_active=True)
+        except Cart.DoesNotExist:
+            return Response({"detail": "Active cart not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = CartItemSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(cart=cart)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CartItemDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, pk, user):
+        try:
+            return CartItem.objects.get(pk=pk, cart__user=user)
+        except CartItem.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        item = self.get_object(pk, request.user)
+        if not item:
+            return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = CartItemSerializer(item)
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        item = self.get_object(pk, request.user)
+        if not item:
+            return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = CartItemSerializer(item, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        item = self.get_object(pk, request.user)
+        if not item:
+            return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
+        item.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    
+#ORDERS
+class OrderListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        orders = Order.objects.filter(customer=request.user)
+        serializer = OrderSerializer(orders, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = OrderSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(customer=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class OrderDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, pk, user):
+        try:
+            return Order.objects.get(pk=pk, customer=user)
+        except Order.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        order = self.get_object(pk, request.user)
+        if not order:
+            return Response({"detail": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = OrderSerializer(order)
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        order = self.get_object(pk, request.user)
+        if not order:
+            return Response({"detail": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = OrderSerializer(order, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        order = self.get_object(pk, request.user)
+        if not order:
+            return Response({"detail": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+        order.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class OrderStatusUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            order = Order.objects.get(pk=pk, customer=request.user)
+        except Order.DoesNotExist:
+            return Response({"detail": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        status_value = request.data.get('status')
+        if status_value not in dict(Order.STATUS_CHOICES):
+            return Response({"detail": "Invalid status."}, status=status.HTTP_400_BAD_REQUEST)
+
+        order.status = status_value
+        order.save()
+        return Response(OrderSerializer(order).data)
+
+
+# class OrderDetailAPIView(APIView):
+#     def get(self, request, pk):
+#         return Response(OrderSerializer(get_object_or_404(Order, pk=pk)).data)
+#     def put(self, request, pk):
+#         o = get_object_or_404(Order, pk=pk)
+#         s = OrderSerializer(o, data=request.data, partial=True)
+#         return Response(s.data) if s.is_valid() and s.save() else Response(s.errors, status=400)
+#     def delete(self, request, pk):
+#         get_object_or_404(Order, pk=pk).delete()
+#         return Response(status=204)
 
 ### ORDER ITEMS ###
-class OrderItemAPIView(APIView):
+class OrderItemListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
-        return Response(OrderItemSerializer(OrderItem.objects.all(), many=True).data)
+        order_items = OrderItem.objects.filter(order__customer=request.user)
+        serializer = OrderItemSerializer(order_items, many=True)
+        return Response(serializer.data)
+
     def post(self, request):
-        s = OrderItemSerializer(data=request.data)
-        return Response(s.data, status=201) if s.is_valid() and s.save() else Response(s.errors, status=400)
+        serializer = OrderItemSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class OrderItemDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, pk, user):
+        try:
+            return OrderItem.objects.get(pk=pk, order__customer=user)
+        except OrderItem.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        item = self.get_object(pk, request.user)
+        if not item:
+            return Response({"detail": "Order item not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = OrderItemSerializer(item)
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        item = self.get_object(pk, request.user)
+        if not item:
+            return Response({"detail": "Order item not found."}, status=status.HTTP_404_NOT_FOUND)
+        serializer = OrderItemSerializer(item, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        item = self.get_object(pk, request.user)
+        if not item:
+            return Response({"detail": "Order item not found."}, status=status.HTTP_404_NOT_FOUND)
+        item.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 ### PAYMENTS ###
 class PaymentAPIView(APIView):
@@ -246,12 +465,4 @@ class WishlistAPIView(APIView):
         return Response(WishlistSerializer(Wishlist.objects.all(), many=True).data)
     def post(self, request):
         s = WishlistSerializer(data=request.data)
-        return Response(s.data, status=201) if s.is_valid() and s.save() else Response(s.errors, status=400)
-
-### COUPONS ###
-class CouponAPIView(APIView):
-    def get(self, request):
-        return Response(CouponSerializer(Coupon.objects.all(), many=True).data)
-    def post(self, request):
-        s = CouponSerializer(data=request.data)
         return Response(s.data, status=201) if s.is_valid() and s.save() else Response(s.errors, status=400)
